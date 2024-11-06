@@ -1,13 +1,14 @@
-# Use an official Node.js image as the base
-FROM node:23
+# Use official Node.js version 20.18.0 image as the base
+FROM node:20.18.0
 
 # Set working directory
-WORKDIR /app
+WORKDIR /app/frontend
 
-# Copy package.json and package-lock.json, if present
-COPY package.json ./
+# Expose the frontend port
+EXPOSE 3000
 
-# Install dependencies
+# Copy package.json and package-lock.json, then install dependencies
+COPY package.json package-lock.json ./
 RUN npm install
 
 # Copy the rest of the frontend code
@@ -16,9 +17,5 @@ COPY . .
 # Build the React app for production
 RUN npm run build
 
-# Serve the built app with a lightweight web server
-RUN npm install -g serve
-CMD ["serve", "-s", "build"]
-
-# Expose the frontend port
-EXPOSE 3000
+# Use the locally installed 'serve' to serve the built app
+CMD ["npm", "run", "serve"]
