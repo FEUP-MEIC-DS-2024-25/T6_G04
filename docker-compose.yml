@@ -3,19 +3,15 @@ services:
     backend:
         build: ./backend
         ports:
-            - "3001:3000" # Maps backend container port 3000 to host port 3001
+            - "3000:3000" # Maps backend container port 3000 to host port 3000
         env_file:
             - ./backend/backend.env
-        volumes:
-            - ./backend:/app/backend
-            - /app/node_modules
 
     frontend:
         build: ./frontend
         ports:
-            - "3000:3000" # Maps frontend container port 3000 to host port 3000
+            - "3002:3002" # Maps frontend container port 3002 to host port 3002
+        environment:
+            - PORT=3002
         depends_on:
             - backend
-        volumes:
-            - ./frontend:/app/frontend
-            - /app/node_modules

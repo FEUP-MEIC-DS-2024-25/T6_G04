@@ -1,5 +1,5 @@
 export const generateContent = async (prompt) => {
-    const response = await fetch('http://localhost:3001/generate', {
+    const response = await fetch('http://localhost:3000/generate', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
