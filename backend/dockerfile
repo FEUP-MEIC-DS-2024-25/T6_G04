@@ -15,4 +15,5 @@ RUN npm install
 COPY . .
 
 # Command to start the backend server with env file setup
-CMD ["node", "--env-file=backend.env", "src/index.js"]
+# CMD ["node", "--env-file=backend.env", "src/index.js"]
+CMD ["node", "--env-file=.env", "src/index.js"]

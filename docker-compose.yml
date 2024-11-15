@@ -5,7 +5,7 @@ services:
         ports:
             - "3000:3000" # Maps backend container port 3000 to host port 3000
         env_file:
-            - ./backend/backend.env
+            - ./backend/.env
 
     frontend:
         build: ./frontend

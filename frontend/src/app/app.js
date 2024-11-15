@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateContent } from './apiService';
+import { generateContent } from '../apiService';
 
 const App = () => {
     const [prompt, setPrompt] = useState('');
