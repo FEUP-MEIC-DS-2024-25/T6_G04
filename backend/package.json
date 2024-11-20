@@ -5,7 +5,8 @@
     "dependencies": {
         "express": "^4.21.1",
         "cors": "^2.8.5",
-        "@google/generative-ai": "^0.21.0" 
+        "@google/generative-ai": "^0.21.0",
+        "node-fetch": "^2.6.9"
     },
     "scripts": {
         "start": "node src/index.js"

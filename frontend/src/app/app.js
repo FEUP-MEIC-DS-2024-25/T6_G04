@@ -8,10 +8,13 @@ const App = () => {
     const handleGenerate = async () => {
         try {
             const result = await generateContent(prompt);
+            console.log('Backend response:', result); // Log the full backend response
             setResponse(result);
         } catch (error) {
             console.error('Error generating content:', error);
-            setResponse('Error generating content');
+    
+            // Display the error message received from the backend
+            setResponse(error.message || 'An unexpected error occurred.');
         }
     };
 
