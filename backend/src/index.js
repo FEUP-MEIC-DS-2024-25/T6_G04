@@ -50,7 +50,10 @@ app.get('/', (req, res) => {
 
 // Add a message to the conversation history and truncate if necessary
 const addToConversationHistory = (message) => {
-    conversationHistory.push(message);
+	//conversationHistory.push("\n")
+	//conversationHistory.push(message + "\n");
+	conversationHistory.push(message);
+	conversationHistory.push("<br>");
 
     // Calculate total characters in the conversation
     const totalLength = conversationHistory.reduce((acc, msg) => acc + msg.length, 0);
@@ -154,9 +157,19 @@ app.post('/generate', async (req, res) => {
     }
 
     try {
+		/*
         const generatedText = await retryGenerateContent(prompt);
         // Send the entire conversation history for verification
+
         res.json({ generatedText });
+		*/
+		const generatedText = await retryGenerateContent(prompt);
+
+        // Properly join the conversation history without commas
+        const formattedText = generatedText.join(''); // No commas, just concatenate all elements
+
+        // Send the formatted text back
+        res.json({ generatedText: formattedText });
     } catch (error) {
         console.error('Error generating content:', error);
 

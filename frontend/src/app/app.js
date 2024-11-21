@@ -30,7 +30,7 @@ const App = () => {
         <button onClick={handleGenerate}>Generate</button>
         <div>
             <h2>Response:</h2>
-            <p>{response}</p>
+            <div dangerouslySetInnerHTML={{ __html: response }}></div>
         </div>
         </div>
     );
