@@ -45,7 +45,8 @@ const MAX_HISTORY_LENGTH = 3000;
 
 // For debug purposes only
 app.get('/', (req, res) => {
-    res.send('Backend is running');
+    //res.send('Backend is running');
+    res.send(strings_file.debug.backend_running);
 });
 
 
@@ -72,7 +73,8 @@ const initializeConversation = () => {
         strings_file.initialContext;
 
     if (!initialContextMessage) {
-        console.error('Initial context message is missing or undefined.');
+        //console.error('Initial context message is missing or undefined.');
+        console.error(strings_file.error_messages.initial_context_missing);
         process.exit(1); // Exit if the required string is missing
     }
 
@@ -107,20 +109,23 @@ const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCa
             if (index === 0) {
                 // First message (initial context) is always from the "user"
                 return {
-                    role: "user",
+                    //role: "user",
+                    role: strings_file.roles.user,
                     parts: [{ text: message }],
                 };
             }
             // Alternate roles after the initial message
             return {
-                role: index % 2 === 1 ? "user" : "model", // User's prompts are odd-indexed; model's responses are even-indexed
+                //role: index % 2 === 1 ? "user" : "model", // User's prompts are odd-indexed; model's responses are even-indexed
+                role: index % 2 === 1 ? strings_file.roles.user : strings_file.roles.model,
                 parts: [{ text: message }],
             };
         }),
     };
 
 	// Log the body for debugging
-	console.log('Sending request body to Gemini API:', JSON.stringify(body, null, 2));
+	//console.log('Sending request body to Gemini API:', JSON.stringify(body, null, 2));
+    console.log(strings_file.debug.send_request, JSON.stringify(body, null, 2));
 
 
     try {
@@ -132,12 +137,14 @@ const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCa
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'Unknown error');
+            //throw new Error(errorData.error?.message || 'Unknown error');
+            throw new Error(errorData.error?.message || strings_file.error_messages.unknown_error);
         }
 
         const data = await response.json();
         const generatedText =
-            data.candidates[0]?.content?.parts[0]?.text || 'No content generated';
+            //data.candidates[0]?.content?.parts[0]?.text || 'No content generated';
+            data.candidates[0]?.content?.parts[0]?.text || strings_file.error_messages.no_content_generated;
 
         // Add Gemini's response to the conversation history
         addToConversationHistory(generatedText);
@@ -159,7 +166,8 @@ app.post('/generate', async (req, res) => {
     const { prompt } = req.body;
 
     if (!prompt) {
-        return res.status(400).json({ error: 'Prompt is required' });
+        //return res.status(400).json({ error: 'Prompt is required' });
+        return res.status(400).json({ error: strings_file.error_messages.missing_prompt });
     }
 
     try {
@@ -177,11 +185,13 @@ app.post('/generate', async (req, res) => {
         // Send the formatted text back
         res.json({ generatedText: formattedText });
     } catch (error) {
-        console.error('Error generating content:', error);
+        //console.error('Error generating content:', error);
+        console.error(strings_file.error_messages.error_generating_content, error);
 
         const errorMessage =
             error?.status === 503
-                ? 'The AI model is currently unavailable due to high demand. Please try again in a few minutes.'
+                //? 'The AI model is currently unavailable due to high demand. Please try again in a few minutes.'
+                ? strings_file.error_messages.service_unavailable
                 : error.message || 'An unknown error occurred while generating content.';
 
         res.status(error?.status || 500).json({
