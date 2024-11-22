@@ -30,8 +30,9 @@ let conversationHistory = [];
  * ALL CURRENT STRINGS SHOULD BE REPLACED WITH THE INFORMATION FROM THIS FILE READER
  */
 
-
-
+// Get "strings.json" file
+const strings_path = require('path');
+const strings_file = require(strings_path.join(__dirname, '..', 'strings', 'strings.json'));
 
 
 
@@ -50,8 +51,6 @@ app.get('/', (req, res) => {
 
 // Add a message to the conversation history and truncate if necessary
 const addToConversationHistory = (message) => {
-	//conversationHistory.push("\n")
-	//conversationHistory.push(message + "\n");
 	conversationHistory.push(message);
 	conversationHistory.push("<br>");
 
@@ -69,7 +68,14 @@ const addToConversationHistory = (message) => {
 
 const initializeConversation = () => {
     const initialContextMessage =
-        "This is your initial context: you are going to help a team that is in the field of software engineering. All following prompts have to take this into account.";
+        //"This is your initial context: you are going to help a team that is in the field of software engineering. All following prompts have to take this into account.";
+        strings_file.initialContext;
+
+    if (!initialContextMessage) {
+        console.error('Initial context message is missing or undefined.');
+        process.exit(1); // Exit if the required string is missing
+    }
+
     addToConversationHistory(initialContextMessage);
 };
 

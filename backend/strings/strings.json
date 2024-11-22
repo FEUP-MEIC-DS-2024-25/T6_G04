@@ -1,0 +1,16 @@
+{
+    "initialContext": "This is your initial context: you are going to help a team that is in the field of software engineering. All following prompts have to take this into account.",
+    "errorMessages": {
+        "missingPrompt": "Prompt is required.",
+        "serviceUnavailable": "The AI model is currently unavailable due to high demand. Please try again in a few minutes.",
+        "unknownError": "An unknown error occurred while generating content."
+    },
+    "geminiPrompts": {
+        "followUp": "Provide a detailed analysis of the software engineering process."
+    },
+    "uiText": {
+        "title": "Gemini Content Generator",
+        "generateButton": "Generate",
+        "placeholder": "Enter your prompt here..."
+    }
+}
