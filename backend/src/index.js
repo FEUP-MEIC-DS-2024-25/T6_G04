@@ -16,10 +16,6 @@ let conversationHistory = [];
 
 
 
-
-
-
-
 /**
  * EVERY STRING SHOULD NOT BE SPECIFIED HERE.
  * ALL STRINGS SHOULD BE EXTERNALIZED INTO FILES.
@@ -31,9 +27,16 @@ let conversationHistory = [];
  */
 
 // Get "strings.json" file
-const strings_path = require('path');
-const strings_file = require(strings_path.join(__dirname, '..', 'strings', 'strings.json'));
+const path = require('path');
+const strings_file = require(path.join(__dirname, '..', 'strings', 'strings.json'));
 
+
+/* ---------------------------------------- MULTER ---------------------------------------- */
+// Multer
+const multer = require('multer');
+const fs = require('fs');
+const readline = require('readline');
+/* ---------------------------------------------------------------------------------------- */
 
 
 
@@ -41,7 +44,7 @@ const strings_file = require(strings_path.join(__dirname, '..', 'strings', 'stri
 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`
 
 // Maximum character limit for the conversation history
-const MAX_HISTORY_LENGTH = 3000;
+const MAX_HISTORY_LENGTH = 30000;
 
 // For debug purposes only
 app.get('/', (req, res) => {
@@ -66,7 +69,6 @@ const addToConversationHistory = (message) => {
 
 
 // Send the initial context to the conversation history
-
 const initializeConversation = () => {
     const initialContextMessage =
         //"This is your initial context: you are going to help a team that is in the field of software engineering. All following prompts have to take this into account.";
@@ -98,10 +100,16 @@ curl \
  *
  */
 const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCall = true) => {
+    //DEBUG
+    console.log('Batch ready to be added to Conversation History\n');
+
     if (isFirstCall) {
         // Add the user prompt to the conversation history only on the first call
         addToConversationHistory(prompt);
     }
+
+    //DEBUG
+    console.log('Batch enviada para o Gemini.\n');
 
     // Prepare the body with the entire conversation history
     const body = {
@@ -160,6 +168,120 @@ const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCa
         throw error;
     }
 };
+
+
+/* ---------------------------------------- UPLOAD FILES ---------------------------------------- */
+// Configure multer for file uploads
+const upload = multer({
+    dest: 'uploads/', // Directory to temporarily store uploaded files
+    limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10MB
+});
+
+// Ensure the uploads directory exists
+const ensureUploadsDirExists = () => {
+    const uploadsDir = path.join(__dirname, '..', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir);
+    }
+};
+
+// Function to process a batch
+const processBatch = async (batch) => {
+    try {
+        console.log('Processing batch:', batch);
+
+        // Convert batch to a single prompt for Gemini
+        const prompt = batch.join('\n');
+
+        //DEGBUG
+        console.log('Prompt created and ready to be sent to Gemini.\n');
+
+        // Send to Gemini
+        const response = await retryGenerateContent(prompt);
+        console.log('Gemini response for batch:', response);
+    } catch (error) {
+        console.error('Error in processBatch:', error);
+        throw error; // Propagate the error to the caller
+    }
+};
+
+// Function to process log file
+const processLogFile = (filePath, processBatch) => {
+    return new Promise((resolve, reject) => {
+        const stream = fs.createReadStream(filePath, { encoding: 'utf-16le' });
+        const rl = readline.createInterface({ input: stream });
+
+        let currentBatch = [];
+        const batchSize = 20000; // Adjust batch size based on Gemini's capabilities
+
+        rl.on('line', async (line) => {
+            currentBatch.push(line);
+
+            if (currentBatch.length >= batchSize) {
+                try {
+                    await processBatch(currentBatch); // Process the batch
+                    currentBatch = []; // Reset the batch
+                } catch (err) {
+                    rl.close(); // Stop reading
+                    reject(err);
+                }
+            }
+        });
+
+        rl.on('close', async () => {
+            try {
+                if (currentBatch.length > 0) {
+                    await processBatch(currentBatch); // Process any remaining lines
+                }
+                console.log('Finished processing the log file.');
+                resolve();
+            } catch (err) {
+                console.error('Error processing final batch:', err);
+                reject(err);
+            }
+        });
+
+        rl.on('error', (err) => {
+            console.error('Error reading the log file:', err);
+            reject(err);
+        });
+    });
+};
+
+// File upload route
+app.post('/upload-log', upload.single('logfile'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const { path: tempPath, originalname } = req.file;
+        //ensureUploadsDirExists();
+        const targetPath = path.join(__dirname, '..', 'uploads', `${Date.now()}-${originalname}`);
+
+        // Move the file
+        fs.rename(tempPath, targetPath, async (err) => {
+            if (err) {
+                console.error('Error moving uploaded file:', err);
+                return res.status(500).json({ error: 'Error processing file' });
+            }
+
+            try {
+                // Process the file
+                await processLogFile(targetPath, processBatch);
+                res.status(200).json({ message: 'File uploaded and processed successfully' });
+            } catch (err) {
+                console.error('Error processing log file:', err);
+                res.status(500).json({ error: 'Error processing the log file.' });
+            }
+        });
+    } catch (error) {
+        console.error('Error handling file upload:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+/* ---------------------------------------------------------------------------------------------- */
 
 
 app.post('/generate', async (req, res) => {

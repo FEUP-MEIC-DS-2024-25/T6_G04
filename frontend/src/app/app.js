@@ -1,37 +1,54 @@
 import React, { useState } from 'react';
-import { generateContent } from '../services/apiService';
 
 const App = () => {
-    const [prompt, setPrompt] = useState('');
-    const [response, setResponse] = useState('');
+    const [file, setFile] = useState(null); // To store the selected file
+    const [uploadStatus, setUploadStatus] = useState(''); // To store the upload response
 
-    const handleGenerate = async () => {
+    // Handle file selection
+    const handleFileChange = (event) => {
+        setFile(event.target.files[0]); // Store the selected file in state
+    };
+
+    // Handle file upload
+    const handleFileUpload = async () => {
+        if (!file) {
+            setUploadStatus('Please select a file to upload.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('logfile', file); // Key must match the backend's `upload.single('logfile')`
+
         try {
-            const result = await generateContent(prompt);
-            console.log('Backend response:', result); // Log the full backend response
-            setResponse(result);
+            const response = await fetch('http://localhost:3000/upload-log', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                setUploadStatus(`Error: ${errorData.error || 'Upload failed'}`);
+                return;
+            }
+
+            const data = await response.json();
+            setUploadStatus(data.message);
         } catch (error) {
-            console.error('Error generating content:', error);
-    
-            // Display the error message received from the backend
-            setResponse(error.message || 'An unexpected error occurred.');
+            console.error('Error uploading file:', error);
+            setUploadStatus('An error occurred during the file upload.');
         }
     };
 
     return (
-        <div>
-        <h1>Gemini Content Generator</h1>
-        <input
-            type="text"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Enter a prompt"
-        />
-        <button onClick={handleGenerate}>Generate</button>
-        <div>
-            <h2>Response:</h2>
-            <div dangerouslySetInnerHTML={{ __html: response }}></div>
-        </div>
+        <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+            <h1>Pattern Partner</h1>
+            <div style={{ marginBottom: '10px' }}>
+                <input type="file" accept=".log" onChange={handleFileChange} />
+            </div>
+            <button onClick={handleFileUpload} style={{ marginLeft: '10px' }}>
+                Upload File
+            </button>
+            {uploadStatus && <p style={{ marginTop: '10px', color: 'blue' }}>{uploadStatus}</p>}
         </div>
     );
 };
