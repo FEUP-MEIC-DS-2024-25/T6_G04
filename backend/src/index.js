@@ -56,14 +56,15 @@ app.get('/', (req, res) => {
 // Add a message to the conversation history and truncate if necessary
 const addToConversationHistory = (message) => {
 	conversationHistory.push(message);
-	conversationHistory.push("<br>");
+	//conversationHistory.push("<br>");
 
     // Calculate total characters in the conversation
     const totalLength = conversationHistory.reduce((acc, msg) => acc + msg.length, 0);
 
     // Remove oldest messages if total exceeds the max length
     while (totalLength > MAX_HISTORY_LENGTH) {
-        conversationHistory.shift();
+        const removedMsg = conversationHistory.shift();
+        totalLength -= removedMsg.length;
     }
 };
 
@@ -269,7 +270,12 @@ app.post('/upload-log', upload.single('logfile'), async (req, res) => {
             try {
                 // Process the file
                 await processLogFile(targetPath, processBatch);
-                res.status(200).json({ message: 'File uploaded and processed successfully' });
+
+                // After processing, send back the conversation history
+                res.status(200).json({
+                    message: 'File uploaded and processed successfully',
+                    conversation: conversationHistory,
+                });
             } catch (err) {
                 console.error('Error processing log file:', err);
                 res.status(500).json({ error: 'Error processing the log file.' });
