@@ -209,7 +209,7 @@ const processBatch = async (batch) => {
 // Function to process log file
 const processLogFile = (filePath, processBatch) => {
     return new Promise((resolve, reject) => {
-        const stream = fs.createReadStream(filePath, { encoding: 'utf-16le' });
+        const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
         const rl = readline.createInterface({ input: stream });
 
         let currentBatch = [];

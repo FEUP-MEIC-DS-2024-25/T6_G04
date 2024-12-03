@@ -47,7 +47,7 @@ const App = () => {
         <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
             <h1>Pattern Partner</h1>
             <div style={{ marginBottom: '10px' }}>
-                <input type="file" accept=".log" onChange={handleFileChange} />
+                <input type="file" accept=".txt" onChange={handleFileChange} />
             </div>
             <button onClick={handleFileUpload} style={{ marginLeft: '10px' }}>
                 Upload File
