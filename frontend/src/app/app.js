@@ -4,7 +4,6 @@ import ReactMarkdown from 'react-markdown';
 const App = () => {
     const [file, setFile] = useState(null); // To store the selected file
     const [uploadStatus, setUploadStatus] = useState(''); // To store the upload response
-    //const [conversation, setConversation] = useState([]);
     const [finalMessage, setFinalMessage] = useState(''); // To store the final output message
 
     // Handle file selection
@@ -37,14 +36,33 @@ const App = () => {
             const data = await response.json();
             setUploadStatus(data.message);
             
-            // Update the conversation state
-            //setConversation(data.conversation || []);
+            // Get only the last message from the conversation (Gemini's response)
             const lastMessage = data.conversation?.[data.conversation.length - 1] || '';
             setFinalMessage(lastMessage);
         } catch (error) {
             console.error('Error uploading file:', error);
             setUploadStatus('An error occurred during the file upload.');
         }
+    };
+
+    // Handle Markdown Download
+    const handleDownloadMarkdown = () => {
+        if (!finalMessage) {
+            alert('No output message available to download.');
+            return;
+        }
+
+        const markdownContent = finalMessage; 
+        const blob = new Blob([markdownContent], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'Patterns.md'; // Filename for the download
+        link.click();
+
+        // Clean up URL object
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -56,7 +74,7 @@ const App = () => {
             <button onClick={handleFileUpload} style={{ marginLeft: '10px' }}>
                 Upload File
             </button>
-            {uploadStatus && <p style={{ marginTop: '10px', color: 'blue' }}>{uploadStatus}</p>}
+            {uploadStatus && <p style={{ marginTop: '10px', color: 'black' }}>{uploadStatus}</p>}
 
             {/* Display the final message */}
             {finalMessage && (
@@ -72,6 +90,19 @@ const App = () => {
                     >
                         <ReactMarkdown>{finalMessage}</ReactMarkdown>
                     </div>
+                    <button
+                        onClick={handleDownloadMarkdown}
+                        style={{
+                            marginTop: '10px',
+                            backgroundColor: 'black',
+                            color: 'white',
+                            border: 'none',
+                            padding: '10px 20px',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Download as Markdown
+                    </button>
                 </div>
             )}
         </div>
