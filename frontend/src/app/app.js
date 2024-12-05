@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 const App = () => {
     const [file, setFile] = useState(null); // To store the selected file
@@ -69,7 +70,7 @@ const App = () => {
                             padding: '10px',
                         }}
                     >
-                        <p>{finalMessage}</p>
+                        <ReactMarkdown>{finalMessage}</ReactMarkdown>
                     </div>
                 </div>
             )}
