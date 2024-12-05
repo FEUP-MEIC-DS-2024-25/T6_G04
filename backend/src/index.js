@@ -110,7 +110,7 @@ const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCa
     }
 
     //DEBUG
-    console.log('Batch enviada para o Gemini.\n');
+    console.log('Batch sent to Gemini.\n');
 
     // Prepare the body with the entire conversation history
     const body = {
@@ -209,7 +209,7 @@ const processBatch = async (batch) => {
 // Function to process log file
 const processLogFile = (filePath, processBatch) => {
     return new Promise((resolve, reject) => {
-        const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
+        const stream = fs.createReadStream(filePath, { encoding: 'utf-16le' });
         const rl = readline.createInterface({ input: stream });
 
         let currentBatch = [];
