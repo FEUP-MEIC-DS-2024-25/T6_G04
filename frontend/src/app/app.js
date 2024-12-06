@@ -5,6 +5,7 @@ const App = () => {
     const [file, setFile] = useState(null); // To store the selected file
     const [uploadStatus, setUploadStatus] = useState(''); // To store the upload response
     const [finalMessage, setFinalMessage] = useState(''); // To store the final output message
+    const [spinner, setSpinnerVisibility] = useState(false); //To store spinner's visibilty
 
     // Handle file selection
     const handleFileChange = (event) => {
@@ -22,6 +23,9 @@ const App = () => {
         formData.append('logfile', file); // Key must match the backend's `upload.single('logfile')`
 
         try {
+            // Turn the spinner visibility on
+            setSpinnerVisibility(true);
+
             const response = await fetch('http://localhost:3000/upload-log', {
                 method: 'POST',
                 body: formData,
@@ -39,6 +43,9 @@ const App = () => {
             // Get only the last message from the conversation (Gemini's response)
             const lastMessage = data.conversation?.[data.conversation.length - 1] || '';
             setFinalMessage(lastMessage);
+
+            // Turn the spinner visibility off
+            setSpinnerVisibility(false);
         } catch (error) {
             console.error('Error uploading file:', error);
             setUploadStatus('An error occurred during the file upload.');
@@ -75,6 +82,29 @@ const App = () => {
                 Upload File
             </button>
             {uploadStatus && <p style={{ marginTop: '10px', color: 'black' }}>{uploadStatus}</p>}
+
+            {/* Display Spinner */}
+            {spinner && (
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginTop: '20px',
+                    }}
+                >
+                    <div
+                        style={{
+                            border: '16px solid #f3f3f3',
+                            borderTop: '16px solid #3498db',
+                            borderRadius: '50%',
+                            width: '130px',
+                            height: '130px',
+                            animation: 'spin 2s linear infinite',
+                        }}
+                    ></div>
+                </div>
+            )}
 
             {/* Display the final message */}
             {finalMessage && (
