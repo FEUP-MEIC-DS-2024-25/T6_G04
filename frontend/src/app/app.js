@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import './styling.css';
+
 
 const App = () => {
     const [file, setFile] = useState(null); // To store the selected file
@@ -78,34 +80,21 @@ const App = () => {
             <div style={{ marginBottom: '10px' }}>
                 <input type="file" accept=".txt" onChange={handleFileChange} />
             </div>
-            <button onClick={handleFileUpload} style={{ marginLeft: '10px' }}>
-                Upload File
-            </button>
+    
+            {/* Button and spinner container */}
+            <div className="upload-container">
+                <button onClick={handleFileUpload} style={{ marginLeft: '10px' }}>
+                    Upload File
+                </button>
+    
+                {/* Display Spinner */}
+                {spinner && (
+                    <div className="loader"></div>
+                )}
+            </div>
+    
             {uploadStatus && <p style={{ marginTop: '10px', color: 'black' }}>{uploadStatus}</p>}
-
-            {/* Display Spinner */}
-            {spinner && (
-                <div
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        marginTop: '20px',
-                    }}
-                >
-                    <div
-                        style={{
-                            border: '16px solid #f3f3f3',
-                            borderTop: '16px solid #3498db',
-                            borderRadius: '50%',
-                            width: '130px',
-                            height: '130px',
-                            animation: 'spin 2s linear infinite',
-                        }}
-                    ></div>
-                </div>
-            )}
-
+    
             {/* Display the final message */}
             {finalMessage && (
                 <div style={{ marginTop: '20px' }}>
@@ -137,6 +126,7 @@ const App = () => {
             )}
         </div>
     );
+    
 };
 
 export default App;
