@@ -1,5 +1,5 @@
 {
-    "initialContext": "You are a software architect specializing in pattern detection. Your task is to analyze the provided log file and identify all distinct patterns within it and provide the total number of patterns detected. For each identified pattern, provide the following details: 1) A brief but clear description of each pattern, including its purpose or significance; 2) How certain you are about that pattern being on the log file. Ensure your output is concise, well-structured, and easy to understand.",
+    "initialContext": "You are a software architect specializing in pattern detection. Your task is to analyze the provided log file and identify all distinct patterns within it and provide the total number of patterns detected. For each identified pattern, provide the following details: 1) A brief but clear description of each pattern, including its purpose or significance; 2) How certain you are about that pattern being on the log file. Ensure your output is concise, well-structured, and easy to understand. You should only send me the final response (not the log contents)",
     "error_messages": {
         "missing_prompt": "Prompt is required.",
         "service_unavailable": "The AI model is currently unavailable due to high demand. Please try again in a few minutes.",

@@ -14,6 +14,9 @@ app.use(express.json());
 // Store the conversation history
 let conversationHistory = [];
 
+// Store Gemini responses
+let geminiResponse = [];
+
 
 
 /**
@@ -44,7 +47,7 @@ const readline = require('readline');
 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`
 
 // Maximum character limit for the conversation history
-const MAX_HISTORY_LENGTH = 30000;
+const MAX_HISTORY_LENGTH = 300000;
 
 // For debug purposes only
 app.get('/', (req, res) => {
@@ -53,13 +56,36 @@ app.get('/', (req, res) => {
 });
 
 
+/**
+ * Adds Gemini's response to the GeminiResponse history
+ * @param {string} fileName - The name of the file being processed
+ * @param {string} message - Gemini's response for the given file
+ */
+const addToGeminiResponse = (fileName, message) => {
+    // Push the response as a structured object
+    geminiResponse.push({ file: fileName, response: message });
+
+    console.log("addToGeminiResponse: ", geminiResponse);
+
+    // Ensure the total character length of GeminiResponse does not exceed MAX_HISTORY_LENGTH
+    let totalLength = geminiResponse.reduce((acc, entry) => acc + entry.response.length, 0);
+
+    while (totalLength > MAX_HISTORY_LENGTH) {
+        const removedEntry = geminiResponse.shift();
+        totalLength -= removedEntry.response.length;
+        console.log("addToGeminiResponse3 ");
+    }
+    console.log("addToGeminiResponse2: ", geminiResponse);
+};
+
+
 // Add a message to the conversation history and truncate if necessary
 const addToConversationHistory = (message) => {
 	conversationHistory.push(message);
 	//conversationHistory.push("<br>");
 
     // Calculate total characters in the conversation
-    const totalLength = conversationHistory.reduce((acc, msg) => acc + msg.length, 0);
+    let totalLength = conversationHistory.reduce((acc, msg) => acc + msg.length, 0);
 
     // Remove oldest messages if total exceeds the max length
     while (totalLength > MAX_HISTORY_LENGTH) {
@@ -100,42 +126,28 @@ curl \
  * 
  *
  */
-const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCall = true) => {
-    //DEBUG
-    console.log('Batch ready to be added to Conversation History\n');
+const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCall = true, localConversationHistory = []) => {
+    console.log('Batch ready to be added to Conversation History');
 
     if (isFirstCall) {
-        // Add the user prompt to the conversation history only on the first call
-        addToConversationHistory(prompt);
+        // Add the user prompt to the local conversation history only on the first call
+        localConversationHistory.push(prompt);
     }
 
-    //DEBUG
-    console.log('Batch sent to Gemini.\n');
+    // Log the local conversation history for debugging
+    console.log('Local Conversation History:', localConversationHistory);
 
     // Prepare the body with the entire conversation history
     const body = {
-        contents: conversationHistory.map((message, index) => {
-            if (index === 0) {
-                // First message (initial context) is always from the "user"
-                return {
-                    //role: "user",
-                    role: strings_file.roles.user,
-                    parts: [{ text: message }],
-                };
-            }
-            // Alternate roles after the initial message
+        contents: localConversationHistory.map((message, index) => {
             return {
-                //role: index % 2 === 1 ? "user" : "model", // User's prompts are odd-indexed; model's responses are even-indexed
-                role: index % 2 === 1 ? strings_file.roles.user : strings_file.roles.model,
+                role: index % 2 === 0 ? strings_file.roles.user : strings_file.roles.model,
                 parts: [{ text: message }],
             };
         }),
     };
 
-	// Log the body for debugging
-	//console.log('Sending request body to Gemini API:', JSON.stringify(body, null, 2));
-    console.log(strings_file.debug.send_request, JSON.stringify(body, null, 2));
-
+    console.log('Sending request body to Gemini API:', JSON.stringify(body, null, 2));
 
     try {
         const response = await fetch(url, {
@@ -146,29 +158,28 @@ const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCa
 
         if (!response.ok) {
             const errorData = await response.json();
-            //throw new Error(errorData.error?.message || 'Unknown error');
             throw new Error(errorData.error?.message || strings_file.error_messages.unknown_error);
         }
 
         const data = await response.json();
-        const generatedText =
-            //data.candidates[0]?.content?.parts[0]?.text || 'No content generated';
-            data.candidates[0]?.content?.parts[0]?.text || strings_file.error_messages.no_content_generated;
+        const generatedText = data.candidates[0]?.content?.parts[0]?.text || strings_file.error_messages.no_content_generated;
 
-        // Add Gemini's response to the conversation history
-        addToConversationHistory(generatedText);
+        // Add Gemini's response to the local conversation history
+        localConversationHistory.push(generatedText);
 
-        return conversationHistory;
+        //return localConversationHistory;
+        return generatedText;
     } catch (error) {
         if (retries > 0) {
             console.warn(`Retrying... Attempts left: ${retries}`);
             await new Promise((resolve) => setTimeout(resolve, delay));
-			// Pass `false` to prevent re-adding the prompt
-            return retryGenerateContent(prompt, retries - 1, delay * 2, false);
+            // Pass `false` to prevent re-adding the prompt
+            return retryGenerateContent(prompt, retries - 1, delay * 2, false, localConversationHistory);
         }
         throw error;
     }
 };
+
 
 
 /* ---------------------------------------- UPLOAD FILES ---------------------------------------- */
@@ -186,44 +197,55 @@ const ensureUploadsDirExists = () => {
     }
 };
 
-// Function to process a batch
-const processBatch = async (batch) => {
+// Modify processBatch to accept conversationHistory
+const processBatch = async (batch, fileName, conversationHistory) => {
+    if (batch.length === 0) {
+        console.warn(`Batch for file ${fileName} is empty. Skipping...`);
+        return;
+    }
+
     try {
-        console.log('Processing batch:', batch);
+        console.log(`Processing batch for file: ${fileName}`, batch);
 
-        // Convert batch to a single prompt for Gemini
         const prompt = batch.join('\n');
-
-        //DEGBUG
-        console.log('Prompt created and ready to be sent to Gemini.\n');
+        console.log('Prompt created:', prompt);
 
         // Send to Gemini
-        const response = await retryGenerateContent(prompt);
-        console.log('Gemini response for batch:', response);
+        const response = await retryGenerateContent(prompt, 3, 2000, true, conversationHistory);
+
+        console.log(`Gemini response for file ${fileName}:`, response);//.join(''));
+
+        // Add Gemini response for the file
+        addToGeminiResponse(fileName, response);//.join(''));
+
+        console.log("processBatch: ", geminiResponse);
     } catch (error) {
-        console.error('Error in processBatch:', error);
-        throw error; // Propagate the error to the caller
+        console.error(`Error in processBatch for file ${fileName}:`, error);
+        throw error;
     }
 };
 
-// Function to process log file
-const processLogFile = (filePath, processBatch) => {
+
+// Modify processLogFile to use a separate conversationHistory
+const processLogFile = (filePath, processBatch, fileName) => {
+    const conversationHistory = []; // Separate conversation history for this file
+
     return new Promise((resolve, reject) => {
-        const stream = fs.createReadStream(filePath, { encoding: 'utf-16le' });
+        const stream = fs.createReadStream(filePath, { encoding: 'utf-8' });
         const rl = readline.createInterface({ input: stream });
 
         let currentBatch = [];
-        const batchSize = 20000; // Adjust batch size based on Gemini's capabilities
+        const batchSize = 20000;
 
         rl.on('line', async (line) => {
             currentBatch.push(line);
 
             if (currentBatch.length >= batchSize) {
                 try {
-                    await processBatch(currentBatch); // Process the batch
-                    currentBatch = []; // Reset the batch
+                    await processBatch(currentBatch, fileName, conversationHistory);
+                    currentBatch = [];
                 } catch (err) {
-                    rl.close(); // Stop reading
+                    rl.close();
                     reject(err);
                 }
             }
@@ -232,60 +254,63 @@ const processLogFile = (filePath, processBatch) => {
         rl.on('close', async () => {
             try {
                 if (currentBatch.length > 0) {
-                    await processBatch(currentBatch); // Process any remaining lines
+                    await processBatch(currentBatch, fileName, conversationHistory);
                 }
-                console.log('Finished processing the log file.');
+                console.log(`Finished processing log file: ${fileName}`);
                 resolve();
             } catch (err) {
-                console.error('Error processing final batch:', err);
+                console.error(`Error processing final batch for file ${fileName}:`, err);
                 reject(err);
             }
         });
 
         rl.on('error', (err) => {
-            console.error('Error reading the log file:', err);
+            console.error(`Error reading log file ${fileName}:`, err);
             reject(err);
         });
     });
 };
 
+
 // File upload route
-app.post('/upload-log', upload.single('logfile'), async (req, res) => {
+app.post('/upload-log', upload.array('logfiles', 10), async (req, res) => {
+    const uploadedFiles = req.files;
+
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+        console.error("No files uploaded.");
+        return res.status(400).json({ error: 'No files uploaded' });
+    }
+
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
+        // Process each file
+        for (const file of uploadedFiles) {
+            const { path: tempPath, originalname } = file;
+            const targetPath = path.join(__dirname, '..', 'uploads', `${Date.now()}-${originalname}`);
+
+            // Move the file to uploads directory
+            fs.renameSync(tempPath, targetPath);
+
+            console.log(`Processing file: ${originalname}`);
+            await processLogFile(targetPath, processBatch, originalname);
         }
 
-        const { path: tempPath, originalname } = req.file;
-        //ensureUploadsDirExists();
-        const targetPath = path.join(__dirname, '..', 'uploads', `${Date.now()}-${originalname}`);
+        console.log("Final geminiResponse:", geminiResponse);//JSON.stringify(geminiResponse[geminiResponse.length -1], null, 2));
 
-        // Move the file
-        fs.rename(tempPath, targetPath, async (err) => {
-            if (err) {
-                console.error('Error moving uploaded file:', err);
-                return res.status(500).json({ error: 'Error processing file' });
-            }
-
-            try {
-                // Process the file
-                await processLogFile(targetPath, processBatch);
-
-                // After processing, send back the conversation history
-                res.status(200).json({
-                    message: 'File uploaded and processed successfully',
-                    conversation: conversationHistory,
-                });
-            } catch (err) {
-                console.error('Error processing log file:', err);
-                res.status(500).json({ error: 'Error processing the log file.' });
-            }
+        // Send Gemini responses to the frontend
+        res.status(200).json({
+            message: 'Files uploaded and processed successfully',
+            geminiResponses: geminiResponse || null, // Include structured responses
+            //geminiResponses: geminiResponse[geminiResponse.length - 1] || null,
         });
-    } catch (error) {
-        console.error('Error handling file upload:', error);
-        res.status(500).json({ error: 'Internal server error' });
+    } catch (err) {
+        console.error('Error processing files:', err);
+        res.status(500).json({ error: 'Error processing one or more files.' });
     }
 });
+
+
+
+
 
 /* ---------------------------------------------------------------------------------------------- */
 
