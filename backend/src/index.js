@@ -126,20 +126,20 @@ curl \
  * 
  *
  */
-const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCall = true, localConversationHistory = []) => {
+const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCall = true) => {
     console.log('Batch ready to be added to Conversation History');
 
     if (isFirstCall) {
         // Add the user prompt to the local conversation history only on the first call
-        localConversationHistory.push(prompt);
+        conversationHistory.push(prompt);
     }
 
     // Log the local conversation history for debugging
-    console.log('Local Conversation History:', localConversationHistory);
+    console.log('Local Conversation History:', conversationHistory);
 
     // Prepare the body with the entire conversation history
     const body = {
-        contents: localConversationHistory.map((message, index) => {
+        contents: conversationHistory.map((message, index) => {
             return {
                 role: index % 2 === 0 ? strings_file.roles.user : strings_file.roles.model,
                 parts: [{ text: message }],
@@ -165,7 +165,7 @@ const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCa
         const generatedText = data.candidates[0]?.content?.parts[0]?.text || strings_file.error_messages.no_content_generated;
 
         // Add Gemini's response to the local conversation history
-        localConversationHistory.push(generatedText);
+        conversationHistory.push(generatedText);
 
         //return localConversationHistory;
         return generatedText;
@@ -174,7 +174,7 @@ const retryGenerateContent = async (prompt, retries = 3, delay = 2000, isFirstCa
             console.warn(`Retrying... Attempts left: ${retries}`);
             await new Promise((resolve) => setTimeout(resolve, delay));
             // Pass `false` to prevent re-adding the prompt
-            return retryGenerateContent(prompt, retries - 1, delay * 2, false, localConversationHistory);
+            return retryGenerateContent(prompt, retries - 1, delay * 2, false);
         }
         throw error;
     }
@@ -228,7 +228,7 @@ const processBatch = async (batch, fileName, conversationHistory) => {
 
 // Modify processLogFile to use a separate conversationHistory
 const processLogFile = (filePath, processBatch, fileName) => {
-    const conversationHistory = []; // Separate conversation history for this file
+    //const conversationHistory = []; 
 
     return new Promise((resolve, reject) => {
         const stream = fs.createReadStream(filePath, { encoding: 'utf-8' });
